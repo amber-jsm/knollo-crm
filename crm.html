@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<style>body{margin:0;font:14px system-ui}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>CRM 효율 대시보드</title>
+</head>
+<body>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  color-scheme:light;
+  --page:#f5f6f4; --surface:#fdfdfc; --surface-2:#eef0ee; --ink:#15181c; --ink-2:#4f5560; --muted:#868c96;
+  --line:#dfe2e0; --ring:rgba(21,24,28,.10);
+  --accent:#1c5cab; --accent-ink:#ffffff; --input:#fff9db;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a;  /* LMS만 / 플친만 / 플친+LMS */
+  --good:#006300; --warn:#b3690d; --crit:#d03b3b;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --page:#0f1113; --surface:#1a1c1f; --surface-2:#24272b; --ink:#f3f4f2; --ink-2:#c0c4bd; --muted:#8d9198;
+    --line:#2e3135; --ring:rgba(255,255,255,.10);
+    --accent:#5598e7; --accent-ink:#0b0b0b; --input:#2d2a1a;
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70;
+    --good:#0ca30c; --warn:#fab219; --crit:#e66767;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --page:#0f1113; --surface:#1a1c1f; --surface-2:#24272b; --ink:#f3f4f2; --ink-2:#c0c4bd; --muted:#8d9198;
+  --line:#2e3135; --ring:rgba(255,255,255,.10);
+  --accent:#5598e7; --accent-ink:#0b0b0b; --input:#2d2a1a;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70;
+  --good:#0ca30c; --warn:#fab219; --crit:#e66767;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font-family:"IBM Plex Sans KR",system-ui,-apple-system,"Segoe UI","Malgun Gothic",sans-serif;font-size:14px;line-height:1.5}
+.wrap{max-width:1240px;margin:0 auto;padding:28px 24px 64px;display:flex;flex-direction:column;gap:28px}
+h1{font-size:22px;font-weight:700;margin:0;letter-spacing:-.01em}
+h2{font-size:15px;font-weight:600;margin:0;letter-spacing:-.005em}
+.sub{color:var(--ink-2);margin:4px 0 0;max-width:70ch}
+.eyebrow{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.num{font-variant-numeric:tabular-nums}
+header{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:500;background:var(--surface-2);color:var(--ink-2)}
+.chip i{width:8px;height:8px;border-radius:50%;display:inline-block}
+.chip.s1 i{background:var(--s1)} .chip.s2 i{background:var(--s2)} .chip.s3 i{background:var(--s3)}
+/* panels */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px 20px}
+.panel-h{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+/* inputs */
+.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px 16px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:12px;color:var(--ink-2);font-weight:500}
+.field input,.field select{font:inherit;color:var(--ink);background:var(--input);border:1px solid var(--line);border-radius:6px;padding:7px 9px;width:100%}
+.field input:focus,.field select:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.field input[type=range]{padding:0;background:transparent;border:0}
+.hint{font-size:12px;color:var(--muted)}
+/* scenarios */
+.scen{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.card{border:1px solid var(--line);border-radius:10px;padding:16px 18px;background:var(--surface);position:relative;display:flex;flex-direction:column;gap:12px}
+.card::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:4px;border-radius:0 3px 3px 0;background:var(--c)}
+.card.s1{--c:var(--s1)} .card.s2{--c:var(--s2)} .card.s3{--c:var(--s3)}
+.card .title{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.card .title b{font-size:15px}
+.hero{display:flex;align-items:baseline;gap:8px}
+.hero .v{font-size:32px;font-weight:700;letter-spacing:-.02em;line-height:1}
+.hero .l{color:var(--muted);font-size:12px}
+.kv{display:grid;grid-template-columns:1fr auto;row-gap:5px;column-gap:12px;font-size:13px;border-top:1px solid var(--line);padding-top:10px}
+.kv span:nth-child(odd){color:var(--ink-2)} .kv span:nth-child(even){text-align:right;font-weight:500}
+.kv .big{font-size:15px;font-weight:600}
+.lv{font-size:11px;padding:2px 7px;border-radius:4px;background:var(--surface-2);color:var(--ink-2);white-space:nowrap}
+.lv.weak{color:var(--warn)}
+.ok{color:var(--good)} .bad{color:var(--crit)}
+/* tables */
+.tbl{width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap}
+.tbl th,.tbl td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:right}
+.tbl th{font-weight:600;color:var(--ink-2);font-size:12px;background:var(--surface-2);position:sticky;top:0}
+.tbl th:first-child,.tbl td:first-child{text-align:left}
+.tbl tr.total td{font-weight:600;border-top:2px solid var(--line)}
+.tbl td.dim{color:var(--muted)}
+.scroll{overflow-x:auto}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+.tabs button,.btn{font:inherit;font-size:13px;padding:6px 12px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink-2);cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+.btn.danger{color:var(--crit)}
+/* chart */
+.chart{position:relative}
+.chart svg{width:100%;height:auto;display:block;font-family:inherit}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--surface);padding:8px 10px;border-radius:6px;font-size:12px;line-height:1.4;box-shadow:0 4px 14px rgba(0,0,0,.2);opacity:0;transition:opacity .12s;max-width:240px;z-index:2}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ink-2);margin-top:8px}
+/* form */
+details summary{cursor:pointer;font-weight:600;font-size:14px;list-style:none;display:flex;align-items:center;gap:8px}
+details summary::before{content:"+";width:18px;height:18px;border-radius:4px;background:var(--surface-2);display:inline-grid;place-items:center;font-size:14px}
+details[open] summary::before{content:"–"}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px 12px;margin-top:14px}
+.form .full{grid-column:1/-1;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.form .grp{grid-column:1/-1;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-top:4px;padding-top:8px;border-top:1px dashed var(--line)}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--surface);padding:8px 14px;border-radius:6px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+textarea{font:12px/1.4 ui-monospace,Menlo,monospace;width:100%;min-height:120px;background:var(--surface-2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px}
+@media (max-width:860px){.scen{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+<header>
+  <div>
+    <div class="eyebrow">Knollo CRM</div>
+    <h1>CRM 효율 대시보드</h1>
+    <p class="sub">타겟 리스트 수·타겟·채널·혜택을 고르면 캠페인 로그를 가중 집계해 예상 전환율과 ROAS를 계산합니다. 전환율 분모는 항상 중복 없는 리스트 수(= 쿠폰 발급 수량)이고, 채널별 발송 수는 리스트 × 도달률(채널 추가·수신거부 반영)로 잡습니다. 세그먼트는 RFM 리포트의 R·F 세그 기준입니다.</p>
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+    <div style="display:flex;gap:6px;flex-wrap:wrap"><span class="chip s2"><i></i>플친만</span><span class="chip s1"><i></i>LMS만</span><span class="chip s3"><i></i>플친+LMS</span></div>
+    <span class="chip" id="storeChip" title="데이터 출처">campaigns.json 불러오는 중…</span>
+  </div>
+</header>
+
+<!-- ============ 시뮬레이터 ============ -->
+<section class="panel">
+  <div class="panel-h"><h2>예상 시뮬레이터</h2><span class="hint">단가: 플친 <span id="pfUnit"></span>원 · LMS <span id="lmUnit"></span>원/건 (설정에서 변경)</span></div>
+  <div class="controls">
+    <div class="field"><label for="inM">타겟 리스트 수 (중복 없는 고객 수)</label><input id="inM" type="number" min="1" step="100" value="3000" class="num"><input id="inMr" type="range" min="200" max="20000" step="100" value="3000" aria-label="모수 슬라이더"></div>
+    <div class="field"><label for="inBen">혜택 유형</label><select id="inBen"></select></div>
+    <div class="field"><label for="inSeg">RFM 세그먼트</label><select id="inSeg"></select><span class="hint" id="segHint"></span></div>
+    <div class="field"><label for="inLoy">브랜드 충성 등급</label><select id="inLoy"></select><span class="hint" id="loyHint"></span></div>
+    <div class="field"><label for="inHis">구매 이력</label><select id="inHis"></select></div>
+    <div class="field"><label for="inCat">관심 카테고리</label><select id="inCat"></select></div>
+    <div class="field"><label for="inPfr">플친 도달률 (채널 추가 비율) %</label><input id="inPfr" type="number" min="0" max="100" step="1" value="70" class="num"><span class="hint" id="pfrHint"></span></div>
+    <div class="field"><label for="inLmr">LMS 도달률 (수신거부 제외) %</label><input id="inLmr" type="number" min="0" max="100" step="1" value="100" class="num"><span class="hint" id="lmrHint"></span></div>
+  </div>
+</section>
+
+<section class="scen" id="scen"></section>
+
+<!-- ============ 차트 ============ -->
+<section class="panel">
+  <div class="panel-h"><h2>리스트 규모 vs 구매전환율 — 지금까지의 캠페인</h2><span class="hint">점 하나 = 캠페인 1건 · 색 = 채널 · 모양 = 혜택(● 쿠폰 ◆ 히든링크) · 점선 = 현재 조건의 예상 전환율</span></div>
+  <div class="chart" id="chart"></div>
+</section>
+
+<!-- ============ 벤치마크 ============ -->
+<section class="panel">
+  <div class="panel-h"><h2>벤치마크</h2><span class="hint">항목을 클릭해 조합하세요 (고른 순서 = 열 순서). 데이터가 있는 조합만 표시 · 가중 평균 (Σ구매 ÷ Σ리스트, Σ매출 ÷ Σ비용) · 캠페인 1~2건 행은 참고용.</span></div>
+  <div class="tabs" role="tablist" id="benchTabs"></div>
+  <div class="scroll" style="margin-top:12px" id="benchTable"></div>
+</section>
+
+<!-- ============ 로그 ============ -->
+<section class="panel">
+  <div class="panel-h"><h2>캠페인 로그</h2>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button class="btn primary" id="btnDownload" hidden>campaigns.json 내려받기 (커밋용)</button>
+      <button class="btn" id="btnExport">JSON 보기/복사</button>
+      <button class="btn danger" id="btnDiscard" hidden>이 브라우저의 변경 취소</button>
+    </div>
+  </div>
+  <div class="scroll" id="logTable"></div>
+  <details style="margin-top:14px" id="addBox">
+    <summary>캠페인 추가</summary>
+    <form class="form" id="addForm">
+      <div class="grp">기본 정보</div>
+      <div class="field"><label>캠페인명</label><input name="name" required placeholder="9월 1차"></div>
+      <div class="field"><label>발송일</label><input name="date" type="date"></div>
+      <div class="field"><label>발송 시간</label><input name="time" type="time"></div>
+      <div class="field"><label>차수</label><input name="round" type="number" min="1" value="1"></div>
+      <div class="field"><label>혜택 유형</label><select name="ben"></select></div>
+      <div class="field"><label>할인율 (%)</label><input name="disc" type="number" min="0" max="100" placeholder="예: 30"></div>
+      <div class="field"><label>혜택 조건</label><input name="cond" placeholder="전 제품 5만원 이상"></div>
+      <div class="field" style="grid-column:span 2"><label>타겟 설명 (시트의 '타겟' 그대로)</label><input name="tgt" placeholder="RFM 기준 이탈위기충성고객"></div>
+      <div class="field"><label>RFM 세그먼트</label><select name="seg"></select></div>
+      <div class="field"><label>브랜드 충성 등급</label><select name="loy"></select></div>
+      <div class="field"><label>구매 이력</label><select name="his"></select></div>
+      <div class="field"><label>관심 카테고리</label><select name="cat"></select></div>
+      <div class="grp">발송 — 리스트 수는 업로드한 고객 수, 채널별 발송 수는 실제 발송된 수 (보내지 않은 채널은 비워두세요)</div>
+      <div class="field"><label>타겟 리스트 수 (= 쿠폰 발급 수량)</label><input name="m" type="number" min="1" required></div>
+      <div class="field"><label>플친 발송 수</label><input name="pf" type="number" min="0"></div>
+      <div class="field"><label>플친 발송비용</label><input name="pc" type="number" min="0" placeholder="비우면 단가×건수"></div>
+      <div class="field"><label>플친 열람 수</label><input name="po" type="number" min="0"></div>
+      <div class="field"><label>플친 클릭 수</label><input name="pk" type="number" min="0"></div>
+      <div class="field"><label>LMS 발송 수</label><input name="lm" type="number" min="0"></div>
+      <div class="field"><label>LMS 발송비용</label><input name="lc" type="number" min="0" placeholder="비우면 단가×건수"></div>
+      <div class="field"><label>LMS 클릭 수 (에어브릿지)</label><input name="lk" type="number" min="0"></div>
+      <div class="grp">성과</div>
+      <div class="field"><label>CRM 구매 수</label><input name="buy" type="number" min="0" required></div>
+      <div class="field"><label>CRM 매출</label><input name="rev" type="number" min="0" required></div>
+      <div class="field"><label>참고) 에어브릿지 구매 (플친)</label><input name="abpf" type="number" min="0"></div>
+      <div class="field"><label>참고) 에어브릿지 구매 (LMS)</label><input name="ablm" type="number" min="0"></div>
+      <div class="field"><label>메모</label><input name="memo"></div>
+      <div class="full"><button class="btn primary" type="submit">로그에 추가</button><button class="btn" type="button" id="btnCancelEdit" hidden>수정 취소</button><span class="hint" id="saveHint">저장하면 화면은 바로 갱신되지만 이 브라우저에만 남습니다. 팀 전체에 반영하려면 위의 "campaigns.json 내려받기"로 파일을 받아 저장소에 커밋하세요.</span></div>
+    </form>
+  </details>
+  <div id="ioBox" hidden style="margin-top:12px"><textarea id="ioText" aria-label="JSON" readonly></textarea><div style="display:flex;gap:6px;margin-top:6px"><button class="btn" id="ioClose">닫기</button></div></div>
+</section>
+
+<!-- ============ 세그먼트 참고 ============ -->
+<section class="panel">
+  <div class="panel-h"><h2>RFM 세그먼트 규모 (리포트 참고)</h2><span class="hint">sparkpet.github.io/knollo-cust-cat/rfm.html · 2026-07-31 스냅샷 · 발송 우선순위 순 · 리포트 갱신 시 여기 숫자는 수동으로 맞춰야 합니다</span></div>
+  <div class="scroll" id="segTable"></div>
+  <div class="panel-h" style="margin-top:18px"><h2>브랜드 충성고객 등급 (리포트 참고)</h2><span class="hint">활성(≤60일) × 반복(주문 수) × 브랜드 폭(카테고리 수). RFM 세그와 별개 축이라 캠페인마다 둘 다 기록할 수 있습니다.</span></div>
+  <div class="scroll" id="loyTable"></div>
+</section>
+
+<!-- ============ 설정 ============ -->
+<section class="panel">
+  <div class="panel-h"><h2>설정</h2><span class="hint">6월 실적에서 역산한 단가 (156,600÷7,830 = 20원, 327,120÷11,280 = 29원)</span></div>
+  <div class="controls" style="max-width:520px">
+    <div class="field"><label for="setPf">플친 발송 단가 (원)</label><input id="setPf" type="number" min="0" value="20" class="num"></div>
+    <div class="field"><label for="setLm">LMS 발송 단가 (원)</label><input id="setLm" type="number" min="0" value="29" class="num"></div>
+  </div>
+  <p class="hint" style="margin:12px 0 0">폴백 단계 — L1 채널+혜택+RFM 세그+충성 등급+구매이력+카테고리 모두 일치 → L2 채널+혜택+RFM 세그+충성 등급 → L3 채널+혜택 → L4 채널만 → L5 전체 평균. 시뮬레이터에서 '전체'를 고른 조건은 필터에서 제외됩니다. 클릭은 채널별 참고 지표(플친 = 카카오 열람 대비, LMS = 에어브릿지 링크 클릭)라 합산 CTR은 만들지 않고, 플친+LMS의 채널별 기여는 에어브릿지 라스트클릭 구매 수로만 참고합니다. 세그먼트 체계는 RFM 리포트(2026-07-31 스냅샷)의 R·F 세그와 브랜드 충성고객 등급을 따르고, 발송 시간대는 오전(12시 전)/오후(12~17시)/저녁(17시 이후)으로 나눕니다. 8~9월 캠페인은 'CRM별 성과' 시트에서 옮겼습니다(리스트 수 = 쿠폰 발급 수량, 구매·매출 = 쿠폰 사용 기준). 6월 3건의 세그먼트·리스트 수, 9/8 성향평가 A/B의 구매 수는 추정값이니 실제에 맞게 수정하세요.</p>
+</section>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+'use strict';
+const CH = ['플친만','LMS만','플친+LMS'];
+const CHCLS = {'플친만':'s2','LMS만':'s1','플친+LMS':'s3'};
+// 세그먼트 체계는 RFM 리포트(sparkpet.github.io/knollo-cust-cat/rfm.html)의 R·F 세그를 따릅니다.
+const LISTS = {
+  ben:['쿠폰','히든링크','쿠폰+히든링크','혜택없음'],
+  seg:['챔피언','고가치 이탈위험','충성','신규','유망','휴면','이탈','미구매 가입자','혼합/미지정'],
+  loy:['다이아(코어)','골드','실버','브론즈(성장)','이탈위험 충성','비충성','미지정'],
+  his:['기구매','미구매','혼합'],
+  cat:['전체','허니콤츄','덴탈','영양제','위생/패드','간식','산책','기타'],
+};
+// RFM 리포트 스냅샷(2026-07-31, n=37,837) 기준 세그먼트 규모 — 시뮬레이터 참고용
+const SEG_INFO = {
+  '챔피언':{rule:'최근 60일 내 구매 · 5회+ (S/A/B/C = 재구매 간격 ≤30/31~60/61~90/90+일)',n:1374,aov:65400,pri:2},
+  '고가치 이탈위험':{rule:'5회+ 구매 · 60일 이상 미구매',n:1830,aov:62700,pri:1},
+  '충성':{rule:'3회+ 구매 · 150일 이내',n:1717,aov:60400,pri:3},
+  '신규':{rule:'1회 구매 · 60일 이내',n:2454,aov:55600,pri:4},
+  '유망':{rule:'60일 이내 활성 · 그 외',n:1010,aov:59000,pri:5},
+  '휴면':{rule:'61~150일 미구매',n:4530,aov:50500,pri:6},
+  '이탈':{rule:'150일 이상 미구매',n:24922,aov:51500,pri:7},
+  '미구매 가입자':{rule:'가입 후 첫 구매 없음 (RFM 밖)',n:null,aov:null,pri:null},
+};
+// 브랜드 충성고객 기준 (같은 리포트 '브랜드 충성고객' 탭): 활성(≤60일) × 반복(주문 수) × 브랜드 폭(카테고리 수)
+const LOY_INFO = {
+  '다이아(코어)':{rule:'≤60일 활성 · 5회+ · 3종+ 카테고리',n:954,orders:10.9,share:0.154,pri:1},
+  '골드':{rule:'≤60일 활성 · 5회+ · 2종 카테고리',n:274,orders:8.1,share:0.031,pri:2},
+  '실버':{rule:'≤60일 활성 · 3회+ · 2종+ 카테고리',n:691,orders:3.5,share:0.033,pri:3},
+  '브론즈(성장)':{rule:'≤60일 활성 · 3회+ · 단일 카테고리',n:395,orders:4.9,share:0.026,pri:4},
+  '이탈위험 충성':{rule:'과거 5회+ · 2종+ 카테고리 · 60일 이상 미구매',n:1430,orders:7.6,share:0.153,pri:5},
+  '비충성':{rule:'위 기준 미달',n:34093,orders:1.48,share:0.603,pri:6},
+};
+const TOD = [['오전','12시 전'],['오후','12시~17시'],['저녁','17시 이후']];
+function todOf(t){ if(!t) return '미입력'; const h=parseInt(String(t).slice(0,2),10); if(isNaN(h)) return '미입력'; return h<12?'오전':h<17?'오후':'저녁'; }
+// 예전 입력값 → 현재 세그먼트명
+const SEG_LEGACY = {'이탈위험 충성고객':'고가치 이탈위험','충성고객':'충성','신규고객':'신규','휴면고객':'휴면','일반고객':'혼합/미지정','전체':'혼합/미지정'};
+const CAT_LEGACY = {'뽀드득츄':'허니콤츄','바디티슈':'위생/패드','케어용품':'기타','뽀드득츄/바디티슈':'기타'};
+const BANDS = [[0,'~1천'],[1000,'1천~3천'],[3000,'3천~1만'],[10000,'1만 이상']];
+const SAMPLE = [
+  // 6월 — 허니콤츄 L 런칭 CRM (이미지 기준). 리스트 수는 LMS 발송 수로 임시 입력
+  {id:'s-2026-06-24-1',sample:true,time:'09:30',loy:'미지정',name:'6월 1차 (허니콤츄 L 런칭)',date:'2026-06-24',round:1,ben:'쿠폰',disc:null,cond:'',tgt:'허니콤츄 L 런칭 안내',seg:'혼합/미지정',his:'기구매',cat:'허니콤츄',m:11280,pf:7830,pc:156600,po:3213,pk:380,lm:11280,lc:327120,lk:629,abpf:31,ablm:16,buy:62,rev:4321400,memo:'플친 09:30 / LMS 14:10 발송. 리스트 수는 LMS 발송 수로 임시 입력'},
+  {id:'s-2026-06-25-2',sample:true,time:'15:15',loy:'미지정',name:'6월 2차 (허니콤츄 L 런칭)',date:'2026-06-25',round:2,ben:'쿠폰',disc:null,cond:'',tgt:'허니콤츄 L 런칭 안내',seg:'혼합/미지정',his:'기구매',cat:'허니콤츄',m:2170,pf:1712,pc:34240,po:907,pk:210,lm:2170,lc:62930,lk:337,abpf:34,ablm:35,buy:68,rev:6173380,memo:'15:15 동시 발송. 리스트 수 임시 입력'},
+  {id:'s-2026-06-26-3',sample:true,time:'12:45',loy:'미지정',name:'6월 3차 (뽀드득츄/바디티슈 링크)',date:'2026-06-26',round:3,ben:'히든링크',disc:null,cond:'',tgt:'뽀드득츄·바디티슈 히든링크 2종',seg:'혼합/미지정',his:'기구매',cat:'기타',m:1113,pf:0,pc:0,po:0,pk:0,lm:1113,lc:32277,lk:222,abpf:0,ablm:0,buy:9,rev:289300,memo:'12:45 발송. 리스트 수 임시 입력'},
+  // 8월 — CRM별 성과 탭. 리스트 수 = 쿠폰 발급 수량, 구매/매출 = 쿠폰 사용 기준
+  {id:'s-2026-08-20-1',sample:true,time:'09:35',loy:'미지정',name:'여름블프+광복절 첫 미구매 50%',date:'2026-08-20',round:1,ben:'쿠폰',disc:50,cond:'',tgt:'여름블프·광복절 기간 가입 후 첫 구매 안 한 고객',seg:'미구매 가입자',his:'미구매',cat:'전체',m:847,pf:568,pc:11360,po:207,pk:9,lm:803,lc:23287,lk:62,abpf:1,ablm:14,buy:12,rev:762380,memo:'09:35 발송. 에어브릿지 클릭 플친 18'},
+  {id:'s-2026-08-21-1',sample:true,time:'09:35',loy:'이탈위험 충성',name:'이탈위기충성 30%',date:'2026-08-21',round:1,ben:'쿠폰',disc:30,cond:'',tgt:'RFM 이탈위기 충성고객',seg:'고가치 이탈위험',his:'기구매',cat:'전체',m:276,pf:211,pc:4220,po:103,pk:13,lm:262,lc:7598,lk:22,abpf:2,ablm:2,buy:9,rev:904890,memo:'09:35 발송. 에어브릿지 클릭 플친 19'},
+  {id:'s-2026-08-22-1',sample:true,time:'09:35',loy:'미지정',name:'챔피언 S그룹 30%',date:'2026-08-22',round:1,ben:'쿠폰',disc:30,cond:'',tgt:'챔피언 S등급 (재구매 간격 ≤30일)',seg:'챔피언',his:'기구매',cat:'전체',m:166,pf:151,pc:3020,po:99,pk:55,lm:160,lc:4640,lk:28,abpf:10,ablm:3,buy:36,rev:2921384,memo:'09:35 발송. 에어브릿지 클릭 플친 62'},
+  {id:'s-2026-08-22-2',sample:true,time:'09:35',loy:'미지정',name:'챔피언 ABC그룹 20%',date:'2026-08-22',round:1,ben:'쿠폰',disc:20,cond:'',tgt:'챔피언 A/B/C등급',seg:'챔피언',his:'기구매',cat:'전체',m:866,pf:737,pc:14740,po:400,pk:91,lm:847,lc:24563,lk:68,abpf:12,ablm:0,buy:41,rev:3177260,memo:'09:35 발송. 에어브릿지 클릭 플친 101'},
+  // 9월
+  {id:'s-2026-09-07-1',sample:true,time:'19:00',loy:'미지정',name:'가입 2~30일 첫구매 미완료 50%',date:'2026-09-07',round:1,ben:'쿠폰',disc:50,cond:'전 제품 3만원 이상',tgt:'가입 2일 이상 30일 이내 첫 구매 안 한 고객',seg:'미구매 가입자',his:'미구매',cat:'전체',m:776,pf:563,pc:11260,po:257,pk:23,lm:758,lc:21982,lk:null,abpf:null,ablm:null,buy:14,rev:576150,memo:'19:00 발송, 혜택 9/7~9/8. 카카오 기준 구매 12'},
+  {id:'s-2026-09-08-1',sample:true,time:'19:00',loy:'미지정',name:'최근 3개월 평균 15만원↑ 30%',date:'2026-09-08',round:1,ben:'쿠폰',disc:30,cond:'전 제품 6.5만원 이상',tgt:'최근 3개월 월평균 15만원 이상 구매 고객',seg:'혼합/미지정',his:'기구매',cat:'전체',m:599,pf:490,pc:9800,po:330,pk:163,lm:563,lc:16327,lk:null,abpf:null,ablm:null,buy:58,rev:4673633,memo:'19:00 발송, 혜택 9/8~9/9. 카카오 기준 구매 54'},
+  {id:'s-2026-09-08-2',sample:true,time:'17:30',loy:'미지정',name:'성향평가 완료자 20% (플친 이미지 A/B)',date:'2026-09-08',round:1,ben:'쿠폰',disc:20,cond:'전 제품 5만원 이상',tgt:'성향평가 기완료자 · 플친 A 와이드 vs B 일반 이미지 테스트',seg:'혼합/미지정',his:'혼합',cat:'전체',m:763,pf:578,pc:11560,po:273,pk:58,lm:763,lc:22127,lk:null,abpf:null,ablm:null,buy:12,rev:316640,memo:'17:30 발송. A/B 합산. 쿠폰 발급 수량 미기재라 리스트=LMS 발송, 구매 수는 카카오 기준(5+7). 열람율 A 47% / B 47%, CTR A 23.0% / B 19.6%'},
+  {id:'s-2026-09-09-1',sample:true,time:'08:55',loy:'미지정',name:'바디티슈 구매자 → 하네스 10%',date:'2026-09-09',round:1,ben:'쿠폰',disc:10,cond:'하네스&리쉬 구매 시',tgt:'바디티슈 구매자 대상 하네스 크로스셀',seg:'혼합/미지정',his:'기구매',cat:'산책',m:419,pf:335,pc:6700,po:null,pk:null,lm:413,lc:11977,lk:null,abpf:null,ablm:null,buy:3,rev:160530,memo:'08:55 발송, 혜택 9/9 당일. 집계 진행 중'},
+  {id:'s-2026-09-09-2',sample:true,time:'08:55',loy:'미지정',name:'하네스 구매자 → 바디티슈 10%',date:'2026-09-09',round:1,ben:'쿠폰',disc:10,cond:'바디티슈 구매 시',tgt:'하네스 구매자 대상 바디티슈 크로스셀',seg:'혼합/미지정',his:'기구매',cat:'위생/패드',m:323,pf:243,pc:4860,po:null,pk:null,lm:319,lc:9251,lk:null,abpf:null,ablm:null,buy:1,rev:11820,memo:'08:55 발송, 혜택 9/9 당일. 집계 진행 중'},
+  {id:'s-2026-09-09-3',sample:true,time:'17:30',loy:'미지정',name:'멀티핏 180일 이내 재구매 10%',date:'2026-09-09',round:1,ben:'쿠폰',disc:10,cond:'멀티핏 구매 시',tgt:'멀티핏 구매 후 180일 이내 고객',seg:'혼합/미지정',his:'기구매',cat:'영양제',m:771,pf:603,pc:12060,po:null,pk:null,lm:742,lc:21518,lk:null,abpf:null,ablm:null,buy:1,rev:113400,memo:'17:30 발송, 혜택 9/9~9/10. 집계 진행 중'},
+  {id:'s-2026-09-09-4',sample:true,time:'17:30',loy:'미지정',name:'멀티핏 180일 이상 재구매 30%',date:'2026-09-09',round:1,ben:'쿠폰',disc:30,cond:'멀티핏 구매 시',tgt:'멀티핏 구매 후 180일 이상 경과 고객',seg:'이탈',his:'기구매',cat:'영양제',m:573,pf:428,pc:8560,po:null,pk:null,lm:557,lc:16153,lk:null,abpf:null,ablm:null,buy:0,rev:0,memo:'17:30 발송, 혜택 9/9~9/10. 집계 진행 중'},
+  {id:'s-2026-09-09-5',sample:true,time:'18:30',loy:'미지정',name:'브레스핏 재구매 10%',date:'2026-09-09',round:1,ben:'쿠폰',disc:10,cond:'브레스핏 구매 시',tgt:'브레스핏 구매 이력 고객 재구매 유도',seg:'혼합/미지정',his:'기구매',cat:'영양제',m:1071,pf:740,pc:14800,po:null,pk:null,lm:1050,lc:30450,lk:null,abpf:null,ablm:null,buy:2,rev:115200,memo:'18:30 발송, 혜택 9/9~9/10. 집계 진행 중'},
+];
+const SEED_V = 3;
+const KEY='knollo-crm-gh-v1';
+const DATA_URL='campaigns.json';
+let state = {rows:[], unit:{pf:20,lm:29}};
+let base=[], baseUnit={pf:20,lm:29}, baseLoaded=false;
+let overlay={added:[],edited:{},deleted:[],unit:null};
+try{ const o=JSON.parse(localStorage.getItem(KEY)||'null'); if(o&&Array.isArray(o.added)) overlay={added:o.added,edited:o.edited||{},deleted:o.deleted||[],unit:o.unit||null}; }catch(e){}
+function saveOverlay(){ try{ localStorage.setItem(KEY, JSON.stringify(overlay)); }catch(e){} }
+function pendingCount(){ return overlay.added.length+Object.keys(overlay.edited).length+overlay.deleted.length+(overlay.unit?1:0); }
+function applyOverlay(){
+  const del=new Set(overlay.deleted);
+  const rows=base.filter(r=>!del.has(r.id)).map(r=>overlay.edited[r.id]?{...overlay.edited[r.id],id:r.id}:r).concat(overlay.added);
+  state.rows=rows; state.unit=overlay.unit||baseUnit; return rows;
+}
+function save(){ saveOverlay(); }
+const db=null;
+const store = {
+  async add(r){ r.id='l-'+Date.now().toString(36)+Math.random().toString(36).slice(2,5); overlay.added.push(r); applyOverlay(); saveOverlay(); refreshChip(); return r.id; },
+  async put(id,r){ const k=overlay.added.findIndex(x=>x.id===id); if(k>=0) overlay.added[k]={...r,id}; else overlay.edited[id]={...r,id}; applyOverlay(); saveOverlay(); refreshChip(); },
+  async del(id){ const k=overlay.added.findIndex(x=>x.id===id); if(k>=0) overlay.added.splice(k,1); else { if(!overlay.deleted.includes(id)) overlay.deleted.push(id); delete overlay.edited[id]; } applyOverlay(); saveOverlay(); refreshChip(); },
+  async units(u){ overlay.unit=u; applyOverlay(); saveOverlay(); refreshChip(); },
+};
+function armed(btn,label,fn){ if(btn.dataset.armed){ delete btn.dataset.armed; btn.textContent=btn.dataset.orig; fn(); return; } btn.dataset.orig=btn.textContent; btn.dataset.armed='1'; btn.textContent=label; setTimeout(()=>{ if(btn.dataset.armed){ delete btn.dataset.armed; btn.textContent=btn.dataset.orig; } },3000); }
+function setChip(txt,ok){ const c=$('#storeChip'); c.textContent=txt; c.style.color = ok?'var(--good)':'var(--warn)'; }
+function refreshChip(){ const p=pendingCount(); const srcTxt=baseLoaded?`campaigns.json ${base.length}건`:`내장 샘플 ${base.length}건 (campaigns.json 로드 실패)`; setChip(p?`${srcTxt} · 이 브라우저에만 있는 변경 ${p}건 → 내려받아 커밋하세요`:srcTxt, baseLoaded&&!p); $('#btnDownload').hidden=!p; $('#btnDiscard').hidden=!p; }
+async function loadBase(){
+  try{
+    const res=await fetch(DATA_URL+'?t='+Date.now(),{cache:'no-store'}); if(!res.ok) throw new Error(res.status);
+    const d=await res.json(); if(!Array.isArray(d.rows)) throw new Error('rows');
+    base=d.rows; baseUnit=d.unit&&n(d.unit.pf)?{pf:n(d.unit.pf),lm:n(d.unit.lm)}:{pf:20,lm:29}; baseLoaded=true;
+  }catch(e){ base=SAMPLE.map(r=>({...r})); baseLoaded=false; }
+  // drop overlay entries that already landed in the base file
+  overlay.added=overlay.added.filter(a=>!base.some(b=>b.id===a.id));
+  Object.keys(overlay.edited).forEach(id=>{ const b=base.find(x=>x.id===id); if(!b) delete overlay.edited[id]; else if(JSON.stringify({...b,id})===JSON.stringify({...overlay.edited[id],id})) delete overlay.edited[id]; });
+  overlay.deleted=overlay.deleted.filter(id=>base.some(b=>b.id===id));
+  if(overlay.unit&&baseUnit.pf===overlay.unit.pf&&baseUnit.lm===overlay.unit.lm) overlay.unit=null;
+  saveOverlay(); applyOverlay(); $('#setPf').value=state.unit.pf; $('#setLm').value=state.unit.lm; renderAll(); refreshChip();
+}
+function exportJson(){ return JSON.stringify({updatedAt:new Date().toISOString(),unit:state.unit,rows:applyOverlay()},null,1); }
+function downloadJson(){ const blob=new Blob([exportJson()],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='campaigns.json'; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},500); }
+// ---------- derived ----------
+const n = v => (v==null||v===''||isNaN(v))?0:Number(v);
+function derive(r0){
+  const r={...r0, seg:SEG_LEGACY[r0.seg]||r0.seg||'혼합/미지정', loy:r0.loy||'미지정', cat:CAT_LEGACY[r0.cat]||r0.cat||'전체', disc:(r0.disc==null||r0.disc==='')?null:n(r0.disc), tod:todOf(r0.time)};
+  const pf=n(r.pf), lm=n(r.lm);
+  const ch = pf>0 ? (lm>0?'플친+LMS':'플친만') : (lm>0?'LMS만':'-');
+  const cost = n(r.pc)+n(r.lc);
+  const m=n(r.m), buy=n(r.buy), rev=n(r.rev);
+  let band=BANDS[0][1]; for(const [lo,nm] of BANDS) if(m>=lo) band=nm;
+  return {...r, ch, cost, band, pfReach: pf&&m?pf/m:null, lmReach: lm&&m?lm/m:null, reachMin: Math.max(pf,lm), reachMax: Math.min(m,pf+lm),
+    openRate: pf?n(r.po)/pf:null, ctr: n(r.po)?n(r.pk)/n(r.po):null, lmCtr: lm?n(r.lk)/lm:null,
+    cvr: m?buy/m:null, roas: cost?rev/cost:null, cpa: buy?cost/buy:null, aov: buy?rev/buy:null, rpm: m?rev/m:null};
+}
+const rows = () => state.rows.map(derive);
+function agg(list){
+  const m=list.reduce((a,r)=>a+n(r.m),0), buy=list.reduce((a,r)=>a+n(r.buy),0), rev=list.reduce((a,r)=>a+n(r.rev),0), cost=list.reduce((a,r)=>a+r.cost,0);
+  return {count:list.length,m,buy,rev,cost, cvr:m?buy/m:null, roas:cost?rev/cost:null, cpa:buy?cost/buy:null, aov:buy?rev/buy:null, rpm:m?rev/m:null};
+}
+// ---------- formatting ----------
+const fmt = {
+  int: v => v==null?'–':Math.round(v).toLocaleString('ko-KR'),
+  d1: v => v==null?'–':v.toLocaleString('ko-KR',{maximumFractionDigits:1,minimumFractionDigits:1}),
+  pct: (v,d=1) => v==null?'–':(v*100).toFixed(d)+'%',
+  won: v => v==null?'–':Math.round(v).toLocaleString('ko-KR')+'원',
+};
+const $ = s => document.querySelector(s);
+function fillSelect(sel, list, def){ sel.innerHTML = list.map(v=>`<option${v===def?' selected':''}>${v}</option>`).join(''); }
+
+// ---------- simulator ----------
+function inputs(){
+  return {m:Math.max(1,n($('#inM').value)), ben:$('#inBen').value, seg:$('#inSeg').value, his:$('#inHis').value, cat:$('#inCat').value, loy:$('#inLoy').value, pfr:Math.min(1,Math.max(0,n($('#inPfr').value)/100)), lmr:Math.min(1,Math.max(0,n($('#inLmr').value)/100))};
+}
+function predict(ch, inp){
+  const all=rows().filter(r=>r.ch!=='-');
+  const any = (v,f)=> v==='전체' || f===v;
+  const levels = [
+    r => r.ch===ch && r.ben===inp.ben && any(inp.seg,r.seg) && any(inp.loy,r.loy) && r.his===inp.his && any(inp.cat,r.cat),
+    r => r.ch===ch && r.ben===inp.ben && any(inp.seg,r.seg) && any(inp.loy,r.loy),
+    r => r.ch===ch && r.ben===inp.ben,
+    r => r.ch===ch,
+    r => true,
+  ];
+  let lvl=5, set=all;
+  for(let i=0;i<levels.length;i++){ const s=all.filter(levels[i]); if(agg(s).m>0){lvl=i+1; set=s; break;} }
+  const a=agg(set);
+  const pf = ch==='LMS만'?0: Math.round(inp.m*inp.pfr);
+  const lm = ch==='플친만'?0: Math.round(inp.m*inp.lmr);
+  const cost = pf*state.unit.pf + lm*state.unit.lm;
+  const cvr=a.cvr, buys = cvr!=null? inp.m*cvr : null, rev = buys!=null&&a.aov!=null? buys*a.aov:null;
+  return {ch,lvl,count:a.count,pf,lm,cost,cvr,buys,aov:a.aov,rev, roas: rev!=null&&cost?rev/cost:null, cpa: buys?cost/buys:null, be: a.aov&&inp.m? cost/a.aov/inp.m:null};
+}
+let lastPred = [];
+function renderScen(){
+  const inp=inputs();
+  lastPred = CH.map(ch=>predict(ch,inp));
+  $('#scen').innerHTML = lastPred.map(p=>{
+    const lvName = ['','조건 완전일치','채널+혜택+세그+충성등급','채널+혜택','채널만','전체 평균'][p.lvl];
+    const weak = p.lvl>=4 || p.count<2;
+    const roasCls = p.roas==null?'':(p.roas>=1?'ok':'bad');
+    return `<article class="card ${CHCLS[p.ch]}">
+      <div class="title"><b>${p.ch}</b><span class="lv ${weak?'weak':''}" title="근거: L${p.lvl} ${lvName}">L${p.lvl} · ${lvName} · ${p.count}건</span></div>
+      <div class="hero"><span class="v num">${fmt.pct(p.cvr,2)}</span><span class="l">예상 구매전환율 (구매 ÷ 리스트)</span></div>
+      <div class="kv num">
+        <span>예상 구매 수</span><span class="big">${fmt.d1(p.buys)}건</span>
+        <span>예상 매출</span><span class="big">${fmt.won(p.rev)}</span>
+        <span>예상 ROAS</span><span class="big ${roasCls}">${fmt.pct(p.roas,0)}</span>
+        <span>예상 발송비용</span><span>${fmt.won(p.cost)}</span>
+        <span>실제 발송 수 (플친 / LMS)</span><span>${fmt.int(p.pf)} / ${fmt.int(p.lm)}</span>
+        <span>예상 CPA</span><span>${fmt.won(p.cpa)}</span>
+        <span>예상 객단가</span><span>${fmt.won(p.aov)}</span>
+        <span>손익분기 전환율</span><span>${fmt.pct(p.be,2)}</span>
+      </div>
+    </article>`;
+  }).join('');
+  renderChart();
+}
+
+// ---------- chart ----------
+function renderChart(){
+  const data=rows().filter(r=>r.ch!=='-'&&r.cvr!=null);
+  const W=960,H=340,P={l:64,r:24,t:18,b:44};
+  const xs=data.map(d=>n(d.m)), ys=data.map(d=>d.cvr);
+  const preds = lastPred.filter(p=>p.cvr!=null).map(p=>p.cvr);
+  const curM = n($('#inM').value);
+  const xmin = Math.max(50, Math.min(100, ...xs.filter(v=>v>0), curM)*0.8), xmax = Math.max(1000, ...xs, curM)*1.25;
+  const ymax = Math.max(0.005, ...ys, ...preds)*1.15;
+  const lx = v => Math.log10(Math.max(v, xmin));
+  const X = v => P.l + (lx(v)-lx(xmin))/(lx(xmax)-lx(xmin))*(W-P.l-P.r), Y = v => H-P.b - v/ymax*(H-P.t-P.b);
+  const niceTicks=(max,k)=>{const step=Math.pow(10,Math.floor(Math.log10(max/k)));const cands=[1,2,2.5,5,10].map(c=>c*step);const s=cands.find(c=>max/c<=k)||cands[4];const t=[];for(let v=0;v<=max;v+=s)t.push(v);return t;};
+  const xt=[100,200,300,500,1000,2000,3000,5000,10000,20000,50000].filter(v=>v>=xmin&&v<=xmax), yt=niceTicks(ymax,5);
+  let g='';
+  yt.forEach(v=>{g+=`<line x1="${P.l}" x2="${W-P.r}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)"/><text x="${P.l-8}" y="${Y(v)+4}" text-anchor="end" font-size="11" fill="var(--muted)">${(v*100).toFixed(1)}%</text>`;});
+  xt.forEach(v=>{g+=`<line x1="${X(v)}" x2="${X(v)}" y1="${P.t}" y2="${H-P.b}" stroke="var(--line)" stroke-dasharray="1 3"/><text x="${X(v)}" y="${H-P.b+18}" text-anchor="middle" font-size="11" fill="var(--muted)">${v>=1000?(v/1000)+'k':v}</text>`;});
+  g+=`<line x1="${P.l}" x2="${W-P.r}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--ink-2)" stroke-width="1"/>`;
+  g+=`<text x="${(P.l+W-P.r)/2}" y="${H-6}" text-anchor="middle" font-size="11" fill="var(--ink-2)">타겟 리스트 수 (중복 없는 고객 수, 로그 스케일)</text>`;
+  // predicted lines
+  const boxes=[];
+  const pl = lastPred.filter(p=>p.cvr!=null).map(p=>({p,y:Y(p.cvr),ly:Y(p.cvr)-4})).sort((a,b)=>b.y-a.y);
+  for(let i=1;i<pl.length;i++){ if(pl[i-1].ly-pl[i].ly<13) pl[i].ly=pl[i-1].ly-13; }
+  pl.forEach(({p,y,ly})=>{ boxes.push({x:W-P.r-4-((p.ch+' 예상 0.00%').length*8),y:ly-11,w:(p.ch+' 예상 0.00%').length*8,h:13}); g+=`<line x1="${P.l}" x2="${W-P.r}" y1="${y}" y2="${y}" stroke="var(--${CHCLS[p.ch]})" stroke-width="1.5" stroke-dasharray="4 4" opacity=".8"/><text x="${W-P.r-4}" y="${ly}" text-anchor="end" font-size="11" fill="var(--ink-2)"><tspan fill="var(--${CHCLS[p.ch]})">●</tspan> ${p.ch} 예상 ${fmt.pct(p.cvr,2)}</text>`; });
+  g+=`<line x1="${X(curM)}" x2="${X(curM)}" y1="${P.t}" y2="${H-P.b}" stroke="var(--muted)" stroke-dasharray="2 3"/>`;
+  // points
+  const fits=b=>!boxes.some(o=>b.x<o.x+o.w&&b.x+b.w>o.x&&b.y<o.y+o.h&&b.y+b.h>o.y);
+  data.map((d,i)=>({d,i,x:X(n(d.m)),y:Y(d.cvr)})).sort((a,b)=>a.y-b.y).forEach(({d,i,x,y})=>{
+    const c=`var(--${CHCLS[d.ch]})`;
+    const shape = d.ben==='히든링크' ? `<path d="M${x} ${y-7}L${x+7} ${y}L${x} ${y+7}L${x-7} ${y}Z" fill="${c}" stroke="var(--surface)" stroke-width="2"/>` : `<circle cx="${x}" cy="${y}" r="6.5" fill="${c}" stroke="var(--surface)" stroke-width="2"/>`;
+    const name=d.name.length>14?d.name.slice(0,13)+'…':d.name, w=name.length*9.6+6;
+    let lab=''; const cands=[{x:x+10,y:y-6,anchor:'start'},{x:x-10-w,y:y-6,anchor:'end'},{x:x+10,y:y+8,anchor:'start'},{x:x-10-w,y:y+8,anchor:'end'}];
+    for(const cd of cands){ const b={x:cd.x,y:cd.y,w,h:12}; if(b.x>=P.l&&b.x+w<=W-P.r&&fits(b)){ boxes.push(b); lab=`<text x="${cd.anchor==='start'?cd.x:cd.x+w}" y="${cd.y+10}" text-anchor="${cd.anchor}" font-size="11" fill="var(--ink-2)">${name}</text>`; break; } }
+    g+=`<g class="pt" data-i="${i}" style="cursor:pointer"><circle cx="${x}" cy="${y}" r="14" fill="transparent"/>${shape}${lab}</g>`;
+  });
+  $('#chart').innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="모수 대비 구매전환율 산점도">${g}</svg><div class="tip" id="tip"></div>
+  <div class="legend"><span class="chip s2"><i></i>플친만</span><span class="chip s1"><i></i>LMS만</span><span class="chip s3"><i></i>플친+LMS</span><span>● 쿠폰 &nbsp;◆ 히든링크</span></div>`;
+  const tip=$('#tip'), box=$('#chart');
+  box.querySelectorAll('.pt').forEach(el=>{
+    el.addEventListener('mousemove',e=>{const d=data[+el.dataset.i];tip.innerHTML=`<b>${d.name}</b> · ${d.ch} · ${d.ben}<br>리스트 ${fmt.int(d.m)} · 구매 ${fmt.int(d.buy)}건<br>전환율 <b>${fmt.pct(d.cvr,2)}</b> · ROAS ${fmt.pct(d.roas,0)}<br>${d.seg} / ${d.his} / ${d.cat}`;const r=box.getBoundingClientRect();tip.style.left=(e.clientX-r.left+12)+'px';tip.style.top=(e.clientY-r.top-10)+'px';tip.style.opacity=1;});
+    el.addEventListener('mouseleave',()=>tip.style.opacity=0);
+  });
+}
+
+// ---------- benchmark ----------
+// ---------- benchmark: pick any dimensions, rows = every combination that has data ----------
+const DIMS = [
+  {id:'ch',label:'채널',get:r=>r.ch,order:v=>CH.indexOf(v)},
+  {id:'ben',label:'혜택 유형',get:r=>r.ben,order:v=>LISTS.ben.indexOf(v)},
+  {id:'disc',label:'할인율',get:r=>r.disc==null?'할인 없음':r.disc+'%',order:v=>v==='할인 없음'?999:parseFloat(v)},
+  {id:'seg',label:'RFM 세그먼트',get:r=>r.seg,order:v=>LISTS.seg.indexOf(v)},
+  {id:'loy',label:'충성 등급',get:r=>r.loy,order:v=>LISTS.loy.indexOf(v)},
+  {id:'tod',label:'발송 시간대',get:r=>r.tod,order:v=>{const i=TOD.findIndex(t=>t[0]===v);return i<0?9:i;}},
+  {id:'his',label:'구매 이력',get:r=>r.his,order:v=>LISTS.his.indexOf(v)},
+  {id:'cat',label:'카테고리',get:r=>r.cat,order:v=>LISTS.cat.indexOf(v)},
+  {id:'band',label:'모수 구간',get:r=>r.band,order:v=>BANDS.findIndex(b=>b[1]===v)},
+  {id:'month',label:'발송 월',get:r=>(r.date||'').slice(0,7)||'미입력',order:v=>v},
+];
+let benchDims=['ch','ben'], benchSort='dim';
+try{ const b=JSON.parse(localStorage.getItem(KEY+'-bench')||'null'); if(b&&Array.isArray(b.dims)){benchDims=b.dims.filter(d=>DIMS.some(x=>x.id===d)); benchSort=b.sort||'dim';} }catch(e){}
+function renderBench(){
+  const dims=benchDims.map(id=>DIMS.find(d=>d.id===id));
+  $('#benchTabs').innerHTML = DIMS.map(d=>{const k=benchDims.indexOf(d.id);return `<button role="tab" aria-selected="${k>=0}" data-id="${d.id}" title="${k>=0?'클릭하면 제외':'클릭하면 추가'}">${k>=0?`<span style="opacity:.6;margin-right:4px">${k+1}</span>`:''}${d.label}</button>`;}).join('')
+    + `<span style="flex:1"></span><label class="hint" style="display:flex;align-items:center;gap:6px">정렬 <select id="benchSort" style="font:inherit;font-size:12px;padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink)"><option value="dim">항목 순</option><option value="cvr">전환율 높은 순</option><option value="roas">ROAS 높은 순</option><option value="count">캠페인 수 많은 순</option><option value="m">리스트 큰 순</option></select></label>`;
+  $('#benchSort').value=benchSort;
+  $('#benchSort').onchange=()=>{benchSort=$('#benchSort').value; saveBench(); renderBench();};
+  $('#benchTabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{const id=b.dataset.id; const k=benchDims.indexOf(id); if(k>=0) benchDims.splice(k,1); else benchDims.push(id); saveBench(); renderBench();});
+  const all=rows().filter(r=>r.ch!=='-');
+  const cols=`<th>캠페인</th><th>Σ 리스트</th><th>Σ 구매</th><th>구매전환율</th><th>Σ 매출</th><th>Σ 비용</th><th>ROAS</th><th>CPA</th><th>객단가</th><th>리스트당 매출</th>`;
+  const cells=a=>`<td class="num ${a.count?'':'dim'}">${a.count}</td><td class="num">${fmt.int(a.m)}</td><td class="num">${fmt.int(a.buy)}</td><td class="num"><b>${fmt.pct(a.cvr,2)}</b></td><td class="num">${fmt.int(a.rev)}</td><td class="num">${fmt.int(a.cost)}</td><td class="num"><b>${fmt.pct(a.roas,0)}</b></td><td class="num">${fmt.int(a.cpa)}</td><td class="num">${fmt.int(a.aov)}</td><td class="num">${fmt.int(a.rpm)}</td>`;
+  if(!dims.length){ $('#benchTable').innerHTML=`<table class="tbl"><thead><tr><th>전체</th>${cols}</tr></thead><tbody><tr class="total"><td>전체</td>${cells(agg(all))}</tr></tbody></table><p class="hint" style="margin:10px 0 0">위에서 항목을 하나 이상 고르면 그 조합별로 집계합니다. 고른 순서가 열 순서가 됩니다.</p>`; return; }
+  const groups=new Map();
+  all.forEach(r=>{ const keys=dims.map(d=>String(d.get(r)??'미입력')); const k=keys.join(''); if(!groups.has(k)) groups.set(k,{keys,rows:[]}); groups.get(k).rows.push(r); });
+  let list=[...groups.values()].map(g=>({...g,a:agg(g.rows)}));
+  const ordKey=g=>g.keys.map((v,i)=>{const o=dims[i].order(v); return typeof o==='number'?(o<0?999:o):o;});
+  const cmp=(x,y)=>{ if(benchSort==='cvr') return (y.a.cvr??-1)-(x.a.cvr??-1); if(benchSort==='roas') return (y.a.roas??-1)-(x.a.roas??-1); if(benchSort==='count') return y.a.count-x.a.count; if(benchSort==='m') return y.a.m-x.a.m;
+    const a=ordKey(x), b=ordKey(y); for(let i=0;i<a.length;i++){ if(a[i]<b[i]) return -1; if(a[i]>b[i]) return 1; } return 0; };
+  list.sort(cmp);
+  let prev=[];
+  const body=list.map(g=>{ const tds=g.keys.map((v,i)=>{ const same=benchSort==='dim'&&prev.slice(0,i+1).join('')===g.keys.slice(0,i+1).join(''); return `<td class="${same?'dim':''}" style="text-align:left">${same?'〃':v}</td>`; }).join(''); prev=g.keys; return `<tr>${tds}${cells(g.a)}</tr>`; }).join('');
+  $('#benchTable').innerHTML = `<table class="tbl"><thead><tr>${dims.map(d=>`<th style="text-align:left">${d.label}</th>`).join('')}${cols}</tr></thead><tbody>${body}<tr class="total"><td colspan="${dims.length}">전체</td>${cells(agg(all))}</tr></tbody></table>`;
+}
+function saveBench(){ try{ localStorage.setItem(KEY+'-bench', JSON.stringify({dims:benchDims,sort:benchSort})); }catch(e){} }
+
+// ---------- log ----------
+function renderLog(){
+  const rs=rows();
+  const h=['캠페인','발송일','시간','채널','혜택','할인율','RFM','충성 등급','구매이력','카테고리','리스트','플친 발송','도달률','열람율','플친 CTR','LMS 발송','도달률','LMS 클릭률','총 비용','구매','매출','전환율','ROAS','CPA','객단가','AB 구매 플친/LMS',''];
+  $('#logTable').innerHTML = `<table class="tbl"><thead><tr>${h.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${rs.map((r,i)=>`<tr>
+    <td title="${(r.tgt?'타겟: '+r.tgt+'\n':'')+(r.cond?'조건: '+r.cond+'\n':'')+(r.memo||'')}">${r.name}</td><td class="dim">${r.date||''}</td><td class="dim num" title="${r.tod}">${r.time||'–'}</td><td><span class="chip ${CHCLS[r.ch]||''}"><i></i>${r.ch}</span></td><td>${r.ben}</td><td class="num">${r.disc==null?'–':r.disc+'%'}</td><td>${r.seg}</td><td class="${r.loy==='미지정'?'dim':''}">${r.loy}</td><td>${r.his}</td><td>${r.cat}</td>
+    <td class="num">${fmt.int(r.m)}</td><td class="num">${r.pf?fmt.int(r.pf):'–'}</td><td class="num dim">${fmt.pct(r.pfReach,0)}</td><td class="num">${fmt.pct(r.openRate)}</td><td class="num">${fmt.pct(r.ctr)}</td><td class="num">${r.lm?fmt.int(r.lm):'–'}</td><td class="num dim">${fmt.pct(r.lmReach,0)}</td><td class="num">${fmt.pct(r.lmCtr)}</td>
+    <td class="num">${fmt.int(r.cost)}</td><td class="num">${fmt.int(r.buy)}</td><td class="num">${fmt.int(r.rev)}</td><td class="num"><b>${fmt.pct(r.cvr,2)}</b></td><td class="num"><b>${fmt.pct(r.roas,0)}</b></td><td class="num">${fmt.int(r.cpa)}</td><td class="num">${fmt.int(r.aov)}</td><td class="num dim">${r.abpf!=null||r.ablm!=null?fmt.int(r.abpf)+' / '+fmt.int(r.ablm):'–'}</td>
+    <td style="white-space:nowrap"><button class="btn" data-edit="${r.id}" aria-label="${r.name} 수정" style="padding:2px 8px">수정</button> <button class="btn danger" data-del="${r.id}" aria-label="${r.name} 삭제" style="padding:2px 8px">삭제</button></td></tr>`).join('')}</tbody></table>`;
+  $('#logTable').querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>armed(b,'정말 삭제?',async()=>{ const r=state.rows.find(x=>x.id===b.dataset.del); if(!r) return; try{ await store.del(r.id); if(!db) renderAll(); toast('삭제했습니다'); }catch(e){ toast('삭제 실패: '+(e&&e.code||e)); } }));
+  $('#logTable').querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{ const r=state.rows.find(x=>x.id===b.dataset.edit); if(!r) return; loadForm(r); });
+}
+function reachHints(){ const rs=rows(); const a=rs.filter(r=>n(r.pf)>0), b=rs.filter(r=>n(r.lm)>0); const w=(l,k)=>{const m=l.reduce((s,r)=>s+n(r.m),0);return m?l.reduce((s,r)=>s+n(r[k]),0)/m:null;}; const pa=w(a,'pf'), la=w(b,'lm'); $('#pfrHint').textContent = pa!=null?`실적 평균 ${fmt.pct(pa)} (Σ플친 발송 ÷ Σ리스트)`:'실적 없음'; $('#lmrHint').textContent = la!=null?`실적 평균 ${fmt.pct(la)} (ΣLMS 발송 ÷ Σ리스트)`:'실적 없음'; }
+function renderSegTable(){
+  const all=rows().filter(r=>r.ch!=='-');
+  const ord=Object.entries(SEG_INFO).sort((a,b)=>(a[1].pri??99)-(b[1].pri??99));
+  $('#segTable').innerHTML=`<table class="tbl"><thead><tr><th>우선순위</th><th>세그먼트</th><th>기준</th><th>규모</th><th>리포트 AOV</th><th>보낸 캠페인</th><th>실적 전환율</th><th>실적 ROAS</th><th>실적 객단가</th></tr></thead><tbody>${ord.map(([k,i])=>{const a=agg(all.filter(r=>r.seg===k));return `<tr><td class="num dim">${i.pri??'–'}</td><td><b>${k}</b></td><td style="white-space:normal;min-width:260px;color:var(--ink-2)">${i.rule}</td><td class="num">${i.n?fmt.int(i.n)+'명':'–'}</td><td class="num">${i.aov?fmt.won(i.aov):'–'}</td><td class="num ${a.count?'':'dim'}">${a.count}</td><td class="num"><b>${fmt.pct(a.cvr,2)}</b></td><td class="num">${fmt.pct(a.roas,0)}</td><td class="num">${fmt.int(a.aov)}</td></tr>`;}).join('')}</tbody></table>`;
+}
+function renderLoyTable(){
+  const all=rows().filter(r=>r.ch!=='-');
+  const ord=Object.entries(LOY_INFO).sort((a,b)=>a[1].pri-b[1].pri);
+  $('#loyTable').innerHTML=`<table class="tbl"><thead><tr><th>등급</th><th>기준</th><th>규모</th><th>평균 주문 수</th><th>매출 비중</th><th>보낸 캠페인</th><th>실적 전환율</th><th>실적 ROAS</th><th>실적 객단가</th></tr></thead><tbody>${ord.map(([k,i])=>{const a=agg(all.filter(r=>r.loy===k));return `<tr><td><b>${k}</b></td><td style="white-space:normal;min-width:240px;color:var(--ink-2)">${i.rule}</td><td class="num">${fmt.int(i.n)}명</td><td class="num">${i.orders}</td><td class="num">${fmt.pct(i.share)}</td><td class="num ${a.count?'':'dim'}">${a.count}</td><td class="num"><b>${fmt.pct(a.cvr,2)}</b></td><td class="num">${fmt.pct(a.roas,0)}</td><td class="num">${fmt.int(a.aov)}</td></tr>`;}).join('')}</tbody></table>`;
+}
+function renderAll(){ reachHints(); renderSegTable(); renderLoyTable(); renderScen(); renderBench(); renderLog(); $('#pfUnit').textContent=state.unit.pf; $('#lmUnit').textContent=state.unit.lm; }
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),1800);}
+
+// ---------- wiring ----------
+fillSelect($('#inBen'),LISTS.ben,'쿠폰'); fillSelect($('#inSeg'),['전체',...LISTS.seg],'전체'); fillSelect($('#inLoy'),['전체',...LISTS.loy.filter(x=>x!=='미지정')],'전체'); fillSelect($('#inHis'),LISTS.his,'기구매'); fillSelect($('#inCat'),LISTS.cat,'전체');
+const F=$('#addForm'); fillSelect(F.ben,LISTS.ben,'쿠폰'); fillSelect(F.seg,LISTS.seg,'혼합/미지정'); fillSelect(F.loy,LISTS.loy,'미지정'); fillSelect(F.his,LISTS.his,'기구매'); fillSelect(F.cat,LISTS.cat,'전체');
+['#inBen','#inSeg','#inLoy','#inHis','#inCat','#inPfr','#inLmr'].forEach(s=>$(s).addEventListener('input',renderScen));
+function segHint(){ const v=$('#inSeg').value, i=SEG_INFO[v]; const h=$('#segHint'); if(!i){ h.textContent = v==='전체'?'세그먼트 조건 무시':''; return; } h.innerHTML = `${i.rule}${i.n?` · 리포트 기준 <b>${i.n.toLocaleString('ko-KR')}명</b> <a href="#" id="useSegN">리스트에 넣기</a>`:''}`; const a=$('#useSegN'); if(a) a.onclick=e=>{e.preventDefault(); $('#inM').value=i.n; $('#inMr').value=Math.min(20000,i.n); renderScen();}; }
+$('#inSeg').addEventListener('input',segHint); segHint();
+function loyHint(){ const v=$('#inLoy').value, i=LOY_INFO[v]; const h=$('#loyHint'); if(!i){ h.textContent = v==='전체'?'충성 등급 조건 무시':''; return; } h.innerHTML=`${i.rule} · 리포트 기준 <b>${i.n.toLocaleString('ko-KR')}명</b> <a href="#" id="useLoyN">리스트에 넣기</a>`; const a=$('#useLoyN'); if(a) a.onclick=e=>{e.preventDefault(); $('#inM').value=i.n; $('#inMr').value=Math.min(20000,i.n); renderScen();}; }
+$('#inLoy').addEventListener('input',loyHint); loyHint();
+$('#inM').addEventListener('input',()=>{$('#inMr').value=$('#inM').value;renderScen();});
+$('#inMr').addEventListener('input',()=>{$('#inM').value=$('#inMr').value;renderScen();});
+$('#setPf').value=state.unit.pf; $('#setLm').value=state.unit.lm;
+let unitT; function unitsChanged(){ state.unit={pf:n($('#setPf').value),lm:n($('#setLm').value)}; renderAll(); clearTimeout(unitT); unitT=setTimeout(()=>store.units(state.unit).catch(()=>toast('단가 저장 실패')),600); }
+$('#setPf').addEventListener('input',unitsChanged);
+$('#setLm').addEventListener('input',unitsChanged);
+F.addEventListener('submit',e=>{
+  e.preventDefault(); const d=Object.fromEntries(new FormData(F).entries());
+  const r={name:d.name,date:d.date,time:d.time||'',round:n(d.round),ben:d.ben,disc:d.disc===''?null:n(d.disc),cond:d.cond||'',tgt:d.tgt||'',seg:d.seg,loy:d.loy||'미지정',his:d.his,cat:d.cat,m:n(d.m),pf:n(d.pf),po:n(d.po),pk:n(d.pk),lm:n(d.lm),lk:n(d.lk),abpf:d.abpf===''?null:n(d.abpf),ablm:d.ablm===''?null:n(d.ablm),buy:n(d.buy),rev:n(d.rev),memo:d.memo};
+  r.pc = d.pc===''? r.pf*state.unit.pf : n(d.pc); r.lc = d.lc===''? r.lm*state.unit.lm : n(d.lc);
+  if(!r.pf&&!r.lm){toast('플친 또는 LMS 발송 수를 입력하세요');return;}
+  const editId=F.dataset.editId; const btn=F.querySelector('button[type=submit]'); btn.disabled=true;
+  (async()=>{ try{
+    if(editId){ await store.put(editId,r); toast(`${r.name} 수정됨`); } else { await store.add(r); toast(`${r.name} 추가됨`); }
+    resetForm(); if(!db) renderAll();
+  }catch(e){ toast((e&&e.code==='quota_exceeded')?'저장소가 가득 찼습니다. 오래된 캠페인을 삭제하세요':'저장 실패: '+(e&&e.code||e)); } finally{ btn.disabled=false; } })();
+});
+function resetForm(){ F.reset(); delete F.dataset.editId; fillSelect(F.ben,LISTS.ben,'쿠폰'); fillSelect(F.seg,LISTS.seg,'혼합/미지정'); fillSelect(F.loy,LISTS.loy,'미지정'); fillSelect(F.his,LISTS.his,'기구매'); fillSelect(F.cat,LISTS.cat,'전체'); F.round.value=1; F.querySelector('button[type=submit]').textContent='로그에 추가'; $('#addBox').querySelector('summary').textContent='캠페인 추가'; $('#btnCancelEdit').hidden=true; }
+function loadForm(r){
+  F.dataset.editId=r.id; $('#addBox').open=true;
+  const set=(k,v)=>{ if(F[k]) F[k].value = (v==null?'':v); };
+  const rr={...r, seg:SEG_LEGACY[r.seg]||r.seg, cat:CAT_LEGACY[r.cat]||r.cat};
+  ['name','date','time','round','ben','disc','cond','tgt','seg','loy','his','cat','m','pf','pc','po','pk','lm','lc','lk','buy','rev','abpf','ablm','memo'].forEach(k=>set(k,rr[k]));
+  F.querySelector('button[type=submit]').textContent='수정 내용 저장'; $('#addBox').querySelector('summary').textContent=`캠페인 수정 — ${r.name}`; $('#btnCancelEdit').hidden=false;
+  $('#addBox').scrollIntoView({behavior:'smooth',block:'start'});
+}
+$('#btnCancelEdit').onclick=()=>resetForm();
+$('#btnExport').onclick=()=>{$('#ioBox').hidden=false;$('#ioText').value=exportJson();$('#ioText').select();};
+$('#ioClose').onclick=()=>{$('#ioBox').hidden=true;};
+$('#btnDownload').onclick=()=>{ downloadJson(); toast('내려받은 campaigns.json을 저장소에 커밋하면 모두에게 반영됩니다'); };
+$('#btnDiscard').onclick=()=>armed($('#btnDiscard'),'한 번 더 누르면 취소',()=>{ overlay={added:[],edited:{},deleted:[],unit:null}; saveOverlay(); applyOverlay(); $('#setPf').value=state.unit.pf; $('#setLm').value=state.unit.lm; renderAll(); refreshChip(); toast('로컬 변경을 취소했습니다'); });
+renderAll();
+loadBase();
+})();
+</script>
+</body>
+</html>
